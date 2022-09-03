@@ -11,6 +11,7 @@ import (
 )
 
 var BotId string
+var MainInteraction *discordgo.Interaction
 
 type PollData struct {
 	ParticipantsYes map[string]discordgo.User
@@ -33,41 +34,45 @@ var Commands = []*discordgo.ApplicationCommand{
 		Description: "Play a game?",
 	},
 }
-
 var ComponentHandlers = map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate, pollData *PollData){
 	"button_accept": handleButtonAccept,
 	"button_deny":   handleButtonDeny,
 }
-var CommandHandlers = map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
+var CommandHandlers = map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate, pollData *PollData){
 
 	"liga": handleLiga,
-	"ping": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: "pong",
-			},
-		})
-	},
 }
 
-func handleLiga(s *discordgo.Session, i *discordgo.InteractionCreate) {
+func handleLiga(s *discordgo.Session, i *discordgo.InteractionCreate, pollData *PollData) {
 
 	// Role - 	&593811313512153090
 	// Marty - 	260102898610864129
 	// Waleri - 260099615674728451
 	// role test2 - <@&1015660476367110234>
 
+	MainInteraction = i.Interaction
+
+	pollData.fillPollResult()
+
 	err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
+			Content: "<@&593811313512153090>",
+			Embeds: []*discordgo.MessageEmbed{
+				{
+					Type:  discordgo.EmbedTypeArticle,
+					Title: "Liga Now?",
+					Description: "Yes: " + pollData.ResultYes + "\n" +
+						"No: " + pollData.ResultNo,
+					Color: 66773,
+				},
+			},
 			AllowedMentions: &discordgo.MessageAllowedMentions{
 				Roles: []string{
-					"1015660476367110234",
+					"1014561722859786282",
 					"593811313512153090",
 				},
 			},
-			Content: "<@&593811313512153090>\nLiga now?",
 			Components: []discordgo.MessageComponent{
 				discordgo.ActionsRow{
 					Components: []discordgo.MessageComponent{
@@ -103,16 +108,18 @@ func handleButtonAccept(s *discordgo.Session, i *discordgo.InteractionCreate, po
 		pollData.fillPollResult()
 
 		err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Embeds: []*discordgo.MessageEmbed{
-					{
-						Type:  discordgo.EmbedTypeArticle,
-						Title: "Results",
-						Description: "Yes: " + pollData.ResultYes +
-							"\nNo: " + pollData.ResultNo,
-						Color: 66773,
-					},
+			Type: discordgo.InteractionResponseDeferredMessageUpdate,
+		})
+		if err != nil {
+			fmt.Println(err.Error())
+		}
+		_, err = s.InteractionResponseEdit(MainInteraction, &discordgo.WebhookEdit{
+			Embeds: &[]*discordgo.MessageEmbed{
+				{
+					Type:  discordgo.EmbedTypeArticle,
+					Title: "Liga Now?",
+					Description: "Yes: " + pollData.ResultYes + "\n" +
+						"No: " + pollData.ResultNo,
 				},
 			},
 		})
@@ -138,6 +145,7 @@ func handleButtonAccept(s *discordgo.Session, i *discordgo.InteractionCreate, po
 			fmt.Println(err.Error())
 		}
 	}
+
 }
 
 func handleButtonDeny(s *discordgo.Session, i *discordgo.InteractionCreate, pollData *PollData) {
@@ -153,16 +161,18 @@ func handleButtonDeny(s *discordgo.Session, i *discordgo.InteractionCreate, poll
 		pollData.fillPollResult()
 
 		err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Embeds: []*discordgo.MessageEmbed{
-					{
-						Type:  discordgo.EmbedTypeArticle,
-						Title: "Results",
-						Description: "Yes: " + pollData.ResultYes +
-							"\nNo: " + pollData.ResultNo,
-						Color: 66773,
-					},
+			Type: discordgo.InteractionResponseDeferredMessageUpdate,
+		})
+		if err != nil {
+			fmt.Println(err.Error())
+		}
+		_, err = s.InteractionResponseEdit(MainInteraction, &discordgo.WebhookEdit{
+			Embeds: &[]*discordgo.MessageEmbed{
+				{
+					Type:  discordgo.EmbedTypeArticle,
+					Title: "Liga Now?",
+					Description: "Yes: " + pollData.ResultYes + "\n" +
+						"No: " + pollData.ResultNo,
 				},
 			},
 		})
@@ -220,7 +230,7 @@ func Start() {
 		switch i.Type {
 		case discordgo.InteractionApplicationCommand:
 			if h, ok := CommandHandlers[i.ApplicationCommandData().Name]; ok {
-				h(s, i)
+				h(s, i, &pollData)
 			}
 		case discordgo.InteractionMessageComponent:
 			if h, ok := ComponentHandlers[i.MessageComponentData().CustomID]; ok {
@@ -276,17 +286,17 @@ func (p *PollData) fillPollResult() {
 
 	for name := range p.ParticipantsYes {
 		if p.ResultYes == "" {
-			p.ResultYes += name
+			p.ResultYes += "**" + name + "**"
 		} else {
-			p.ResultYes += ", " + name
+			p.ResultYes += ", **" + name + "**"
 		}
 	}
 
 	for name := range p.ParticipantsNo {
 		if p.ResultNo == "" {
-			p.ResultNo += name
+			p.ResultNo += "**" + name + "**"
 		} else {
-			p.ResultNo += ", " + name
+			p.ResultNo += ", **" + name + "**"
 		}
 	}
 }
