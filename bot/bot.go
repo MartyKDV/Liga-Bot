@@ -120,6 +120,7 @@ func handleButtonAccept(s *discordgo.Session, i *discordgo.InteractionCreate, po
 					Title: "Liga Now?",
 					Description: "Yes: " + pollData.ResultYes + "\n" +
 						"No: " + pollData.ResultNo,
+					Color: 66773,
 				},
 			},
 		})
@@ -173,6 +174,7 @@ func handleButtonDeny(s *discordgo.Session, i *discordgo.InteractionCreate, poll
 					Title: "Liga Now?",
 					Description: "Yes: " + pollData.ResultYes + "\n" +
 						"No: " + pollData.ResultNo,
+					Color: 66773,
 				},
 			},
 		})
@@ -284,19 +286,19 @@ func (p *PollData) fillPollResult() {
 	p.ResultYes = ""
 	p.ResultNo = ""
 
-	for name := range p.ParticipantsYes {
+	for _, user := range p.ParticipantsYes {
 		if p.ResultYes == "" {
-			p.ResultYes += "**" + name + "**"
+			p.ResultYes += "**<@" + user.ID + ">**"
 		} else {
-			p.ResultYes += ", **" + name + "**"
+			p.ResultYes += ", **<@" + user.ID + ">**"
 		}
 	}
 
-	for name := range p.ParticipantsNo {
+	for _, user := range p.ParticipantsNo {
 		if p.ResultNo == "" {
-			p.ResultNo += "**" + name + "**"
+			p.ResultNo += "**<@" + user.ID + ">**"
 		} else {
-			p.ResultNo += ", **" + name + "**"
+			p.ResultNo += ", **<@" + user.ID + ">**"
 		}
 	}
 }
